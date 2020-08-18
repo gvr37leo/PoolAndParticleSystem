@@ -3,13 +3,14 @@ class ParticleSystem{
 
     pool = new Pool(400,false)
     particles = new TableMap<Particle>('id',['poolitemid'])
-    
+    onParticleCreated = new EventSystem<Particle>()
+    onParticleDead = new EventSystem<Particle>()
+    onParticleUpdate = new EventSystem<Particle>()
 
     constructor(
         public spawnrate:number,
         public pos:Vector,
     ){
-        
         var rng = new RNG(0)
         this.pool.onPoolItemInstaniated.listen(pi => {
             var particlelifetime = 10
@@ -17,31 +18,36 @@ class ParticleSystem{
             this.particles.add(particle)
             pi.onMount.listen(() => {
                 particle.pos = this.pos.c()
-                particle.speed = new Vector(rng.range(-10,10),rng.range(-10,10))
+                particle.speed = new Vector(rng.range(-10,10),rng.range(-40,-100))
                 particle.sizeanim.write(10,0,particlelifetime * 1000,AnimType.once)
+                this.onParticleCreated.trigger(particle)
             })
             pi.onDismount.listen(() => {
-                //instantiate explosion
+                this.onParticleDead.trigger(particle)
             })
         })
         this.pool.init()
 
         setInterval(() => {
+            this.burst(1)
+        },spawnrate)
+
+    }
+
+    burst(amount:number){
+        for(var i = 0; i < amount;i++){
             let pi = this.pool.get()
             let particle = this.particles.get(pi.id)
             setTimeout(() => {
                 this.pool.return(pi.id)
             },particle.lifetimesec * 1000)
-        },spawnrate)
-
+        }
     }
 
     update(dt:number){
-        var gravity = new Vector(0,5)
         var particles = this.getActiveParticles()
         for(var particle of particles){
-            particle.speed.add(gravity.c().scale(dt))
-            particle.pos.add(particle.speed.c().scale(dt))
+            this.onParticleUpdate.trigger(particle)
         }
     }
 

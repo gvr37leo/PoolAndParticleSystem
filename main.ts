@@ -14,14 +14,34 @@ var canvas = crret.canvas
 var ctxt = crret.ctxt
 
 var ps = new ParticleSystem(100, new Vector(300,200))
+ps.onParticleCreated.listen(p => {
+    
+})
+ps.onParticleDead.listen(p => {
+    // var newps = new ParticleSystem(0,p.pos.c())
+    // newps.burst(100)
+})
+ps.onParticleUpdate.listen(p => {
+    //do gravity and speed
+})
+var gravity = new Vector(0,40)
+
+
+ps.burst(100)
 
 loop((dt) => {
+    dt = clamp(dt,1,32)
     dt /= 1000
     ctxt.clearRect(0,0,screensize.x,screensize.y)
 
 
     ps.update(dt)
     var particles = ps.getActiveParticles()
+    for(var particle of particles){
+        particle.speed.add(gravity.c().scale(dt))
+        particle.pos.add(particle.speed.c().scale(dt))
+    }
+
     for(var particle of particles){
         var size = particle.sizeanim.get()
         ctxt.fillRect(particle.pos.x - size/2,particle.pos.y - size/2,size,size)
