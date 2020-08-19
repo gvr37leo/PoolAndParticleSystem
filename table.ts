@@ -32,4 +32,14 @@ class TableMap<T>{
     getForeign(key:string,id:number):T[]{
         return this.foreignmaps.get(key).get(id)
     }
+
+    delete(id:number){
+        var item = this.primarymap.get(id)
+        this.primarymap.delete(id)
+        // for(var foreignkey of this.foreignkeys){
+        //     var array = this.foreignmaps.get(foreignkey).get(item[foreignkey])
+        //     if(
+        //     array.push(item)
+        // }
+    }
 }

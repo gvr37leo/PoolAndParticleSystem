@@ -1,60 +1,46 @@
-class Box<T>{
-    beforeChange:EventSystem<T> = new EventSystem()
-    afterChange:EventSystem<T> = new EventSystem()
 
-    constructor(public value:T){
 
-    }
+// class PEvent<T>{
+//     cbset:Set<EventListener2<T>> = new Set()
+//     handled:boolean = false
 
-    get():T{
-        return this.value
-    }
+//     constructor(public value:T){
 
-    set(val:T){
-        if(val != this.value){
-            this.beforeChange.trigger(this.value)
-            this.value = val
-            this.afterChange.trigger(this.value)
-        }
-    }
-}
-
-class PEvent<T>{
-    cbset:Set<EventListener2<T>> = new Set()
-    handled:boolean = false
-
-    constructor(public value:T){
-
-    }
+//     }
     
-}
+// }
 
-type EventListener2<T> = (val:T,e:PEvent<T>) => void
+// type EventListener2<T> = (val:T,e:PEvent<T>) => void
+class EventListener2<T>{
+    id:number
+    
+    constructor(
+        public cb:(v:T) => void
+    ){
+
+    }
+}
 
 class EventSystem<T>{
-    listeners:EventListener2<T>[] = []
+
+    listeners = new TableMap<EventListener2<T>>('id',[])
 
     constructor(){
 
     }
 
-    listen(cb:EventListener2<T>){
-        this.listeners.push(cb)
+    listen(cb:(v:T) => void){
+        var evl = new EventListener2(cb)
+        return this.listeners.add(evl)
     }
 
     trigger(val:T){
-        this.continue(new PEvent(val)) 
+        for(var [key,value] of this.listeners.primarymap.entries()){
+            value.cb(val)
+        }
     }
 
-    continue(e:PEvent<T>){
-        for (var cb of this.listeners) {
-            if(e.cbset.has(cb) == false){
-                e.cbset.add(cb)
-                cb(e.value,e)
-                if(e.handled){
-                    break
-                }
-            }
-        }
+    unlisten(id:number){
+        return this.listeners.delete(id)
     }
 }

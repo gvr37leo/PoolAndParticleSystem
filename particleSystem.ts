@@ -1,25 +1,28 @@
 
 class ParticleSystem{
-
-    pool = new Pool(400,false)
+    id:number
+    pool = new Pool(400,true)
     particles = new TableMap<Particle>('id',['poolitemid'])
     onParticleCreated = new EventSystem<Particle>()
     onParticleDead = new EventSystem<Particle>()
-    onParticleUpdate = new EventSystem<Particle>()
+    onParticleUpdate = new EventSystem<{ particle: Particle; dt: number; }>()
+    private intervalid = null
 
     constructor(
-        public spawnrate:number,
+        public particlesPerSecond:number,
         public pos:Vector,
+        public particlelifetimeSec,
     ){
-        var rng = new RNG(0)
+        
+    }
+
+    init(){
         this.pool.onPoolItemInstaniated.listen(pi => {
-            var particlelifetime = 10
-            let particle = new Particle(pi.id,1,particlelifetime, new Vector(0,0), new Vector(0,0))
+            
+            let particle = new Particle(this.id,pi.id,this.particlelifetimeSec, new Vector(0,0), new Vector(0,0))
             this.particles.add(particle)
             pi.onMount.listen(() => {
-                particle.pos = this.pos.c()
-                particle.speed = new Vector(rng.range(-10,10),rng.range(-40,-100))
-                particle.sizeanim.write(10,0,particlelifetime * 1000,AnimType.once)
+                
                 this.onParticleCreated.trigger(particle)
             })
             pi.onDismount.listen(() => {
@@ -28,10 +31,22 @@ class ParticleSystem{
         })
         this.pool.init()
 
-        setInterval(() => {
-            this.burst(1)
-        },spawnrate)
+        if(this.particlesPerSecond != 0){
+            this.intervalid = setInterval(() => {
+                this.burst(1)
+            },(1 / this.particlesPerSecond) * 1000)
+        }
+    }
 
+    delete(){
+        clearTimeout(this.intervalid)
+    }
+
+    update(dt:number){
+        var particles = this.getActiveParticles()
+        for(var particle of particles){
+            this.onParticleUpdate.trigger({particle,dt})
+        }
     }
 
     burst(amount:number){
@@ -44,12 +59,6 @@ class ParticleSystem{
         }
     }
 
-    update(dt:number){
-        var particles = this.getActiveParticles()
-        for(var particle of particles){
-            this.onParticleUpdate.trigger(particle)
-        }
-    }
 
     getActiveParticles(){
         return this.pool.getActiveItems().map(pi => this.particles.getForeign('poolitemid',pi.id)[0])
@@ -61,8 +70,8 @@ class Particle{
     sizeanim = new Anim()
     
     constructor(
+        public particleSystemid:number,
         public poolitemid:number,
-        public size:number,
         public lifetimesec:number,
         public pos:Vector,
         public speed:Vector,
