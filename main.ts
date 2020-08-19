@@ -6,29 +6,19 @@
 /// <reference path="particleSystem.ts" />
 
 //todo
-//colors
-//bezier size
-//tablemap delete foreign keys
-//shared particles tablemap
-
+//make it easy todo general unity settings (make a list of usefull settings)
+//refine bezieranimation
 
 class ParticleData{
     id:number
     
-    
-    
     constructor(
         public particleid:number,
         public hue:Anim,
-        public size:Anim,
+        public size:BezierAnim,
     ){
 
     }
-
-    render(){
-
-    }
-
 }
 
 
@@ -40,70 +30,62 @@ var onUpdate = new EventSystem<number>()
 var onDraw = new EventSystem<void>()
 var rng = new RNG(0)
 var pdatatable = new TableMap<ParticleData>('id',['particleid'])
-var ps = new ParticleSystem(1, new Vector(300,800),4)
-var pstable = new TableMap<ParticleSystem>('id',[])
-pstable.add(ps)
+var ps = new ParticleSystem<ParticleData>(1, new Vector(300,800),4)
 ps.init()
+var sizepath = [new Vector(0,0),new Vector(0,1),new Vector(1,1),new Vector(1,0),]
 
 ps.onParticleCreated.listen(particle => {
-    pdatatable.add(new ParticleData(particle.id,
+    particle.data = new ParticleData(particle.id,
         new Anim().write(0,360,particle.lifetimesec * 1000, AnimType.once), 
-        new Anim().write(10,0,particle.lifetimesec * 1000, AnimType.once)
-    ))
-    particle.init(pstable)
-    particle.speed = rotate2d(new Vector(0,-150),rng.range(-0.1,0.1)) 
+        new BezierAnim(sizepath).write(0,1,particle.lifetimesec * 1000, AnimType.once)
+    )
+    particle.pos = ps.pos.c()
+    particle.speed = rotate2d(new Vector(0,-200),rng.range(-0.05,0.05)) 
 })
 
-ps.onParticleDead.listen(p => {
-    var pdata = pdatatable.getForeign('particleid',p.id)[0]
-    pdatatable.delete(pdata.id)
-
-    // let subps = new ParticleSystem(0,p.pos.c(),4)
-    // pstable.add(subps)
-    // subps.init()
-    // subps.onParticleCreated.listen(particle => {
-    //     initParticle(particle)
-        
-    //     particle.speed = new Vector(rng.range(-10,10),rng.range(-40,-100))
-    // })
-
-
-
-    // subps.onParticleUpdate.listen(({particle,dt}) => {
-    //     updateParticle(particle,dt)
-    // })
-
-    // subps.onParticleDraw.listen(p => {
-    //     var size = 10
-    //     ctxt.fillRect(p.pos.x - size/2,p.pos.y - size/2,size,size)
-    // })
-
-    // let onupdateid = onUpdate.listen(dt => {
-    //     subps.update(dt)
-    // })
-
-    // let ondrawid = onDraw.listen(() => {
-    //     subps.draw()
-    // })
-
-    // setTimeout(() => {
-    //     subps.delete()
-    //     onUpdate.unlisten(onupdateid)
-    //     onDraw.unlisten(ondrawid)
-    // },subps.particlelifetimeSec * 1000)
-    // subps.burst(20)
-})
 ps.onParticleUpdate.listen(({particle,dt}) => {
     particle.update(dt)
 })
+
 ps.onParticleDraw.listen(p => {
-    var pdata = pdatatable.getForeign('particleid',p.id)[0]
-    var size = pdata.size.get()
-    ctxt.fillStyle = `hsl(${pdata.hue.get()},100%,50%)`
-    ctxt.beginPath()
-    ctxt.ellipse(p.pos.x,p.pos.y,size,size,0,0,TAU)
-    ctxt.fill()
-    // ctxt.fillRect(p.pos.x - size/2,p.pos.y - size/2,size,size)
+    var size = p.data.size.getSmooth() * 10
+    fillCircle(p.pos,size,`hsl(${p.data.hue.get()},100%,50%)`)
+})
+
+ps.onParticleDead.listen(p => {
+
+    let subps = new ParticleSystem<ParticleData>(0,p.pos.c(),4)
+    subps.init()
+    subps.onParticleCreated.listen(particle => {
+        particle.data = new ParticleData(particle.id,
+            new Anim().write(0,360,particle.lifetimesec * 1000, AnimType.once), 
+            new BezierAnim(sizepath).write(0,1,(particle.lifetimesec * 1000) * rng.range(0.3,1) , AnimType.once)
+        )
+        particle.pos = subps.pos.c()
+        particle.speed = new Vector(rng.range(-50,50),rng.range(-50,50)).add(p.speed)
+    })
+    subps.onParticleUpdate.listen(({particle,dt}) => {
+        particle.update(dt)
+    })
+    subps.onParticleDraw.listen(p => {
+        var size = p.data.size.getSmooth()
+        fillCircle(p.pos,size * 10,'orange')
+    })
+
+    let onupdateid = onUpdate.listen(dt => {
+        subps.update(dt)
+    })
+
+    let ondrawid = onDraw.listen(() => {
+        subps.draw()
+    })
+
+    setTimeout(() => {
+        subps.delete()
+        onUpdate.unlisten(onupdateid)
+        onDraw.unlisten(ondrawid)
+    },subps.particlelifetimeSec * 1000)
+    subps.burst(20)
 })
 
 onUpdate.listen(dt => {
@@ -130,12 +112,20 @@ var lastdt = 0
 loop((dt) => {
     dt /= 1000
     lastdt = dt
-    ctxt.clearRect(0,0,screensize.x,screensize.y)
     ctxt.fillStyle = 'black'
+    ctxt.fillRect(0,0,screensize.x,screensize.y)
+    ctxt.fillStyle = 'white'
     ctxt.fillText(`fps ${fps}`,10,10)
-    
+
     onUpdate.trigger(dt)
     onDraw.trigger()
     
     
 })
+
+function fillCircle(pos:Vector,radius:number,color:string){
+    ctxt.fillStyle = color
+    ctxt.beginPath()
+    ctxt.ellipse(pos.x,pos.y,radius,radius,0,0,TAU)
+    ctxt.fill()
+}

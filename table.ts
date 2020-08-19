@@ -36,10 +36,11 @@ class TableMap<T>{
     delete(id:number){
         var item = this.primarymap.get(id)
         this.primarymap.delete(id)
-        // for(var foreignkey of this.foreignkeys){
-        //     var array = this.foreignmaps.get(foreignkey).get(item[foreignkey])
-        //     if(
-        //     array.push(item)
-        // }
+
+        for(var foreignkey of this.foreignkeys){
+            var array = this.foreignmaps.get(foreignkey).get(item[foreignkey])
+            var  i = array.findIndex(v => v[this.primarykey] == id)
+            array.splice(i,1) 
+        }
     }
 }

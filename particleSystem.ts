@@ -1,12 +1,12 @@
 
-class ParticleSystem{
+class ParticleSystem<T>{
     id:number
     pool = new Pool(400,true)
-    particles = new TableMap<Particle>('id',['poolitemid'])
-    onParticleCreated = new EventSystem<Particle>()
-    onParticleDead = new EventSystem<Particle>()
-    onParticleUpdate = new EventSystem<{ particle: Particle; dt: number; }>()
-    onParticleDraw = new EventSystem<Particle>()
+    particles = new TableMap<Particle<T>>('id',['poolitemid'])
+    onParticleCreated = new EventSystem<Particle<T>>()
+    onParticleDead = new EventSystem<Particle<T>>()
+    onParticleUpdate = new EventSystem<{ particle: Particle<T>; dt: number; }>()
+    onParticleDraw = new EventSystem<Particle<T>>()
     private intervalid = null
 
     constructor(
@@ -20,7 +20,7 @@ class ParticleSystem{
     init(){
         this.pool.onPoolItemInstaniated.listen(pi => {
             
-            let particle = new Particle(this.id,pi.id,this.particlelifetimeSec, new Vector(0,0), new Vector(0,0))
+            let particle = new Particle<T>(this.id,pi.id,this.particlelifetimeSec, new Vector(0,0), new Vector(0,0))
             this.particles.add(particle)
             pi.onMount.listen(() => {
                 
@@ -75,9 +75,10 @@ class ParticleSystem{
     }
 }
 
-class Particle{
+class Particle<T>{
     id:number
-    
+    data:T
+
     constructor(
         public particleSystemid:number,
         public poolitemid:number,
@@ -86,11 +87,6 @@ class Particle{
         public speed:Vector,
     ){
 
-    }
-
-    init(pstable:TableMap<ParticleSystem>){
-        var ps2 = pstable.get(this.particleSystemid) 
-        this.pos = ps2.pos.c()
     }
 
     update(dt:number){
