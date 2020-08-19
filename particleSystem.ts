@@ -6,6 +6,7 @@ class ParticleSystem{
     onParticleCreated = new EventSystem<Particle>()
     onParticleDead = new EventSystem<Particle>()
     onParticleUpdate = new EventSystem<{ particle: Particle; dt: number; }>()
+    onParticleDraw = new EventSystem<Particle>()
     private intervalid = null
 
     constructor(
@@ -63,11 +64,19 @@ class ParticleSystem{
     getActiveParticles(){
         return this.pool.getActiveItems().map(pi => this.particles.getForeign('poolitemid',pi.id)[0])
     }
+
+    draw(){
+        var particles = this.getActiveParticles()
+
+        for(var particle of particles){
+            this.onParticleDraw.trigger(particle)
+            
+        }
+    }
 }
 
 class Particle{
     id:number
-    sizeanim = new Anim()
     
     constructor(
         public particleSystemid:number,
@@ -77,6 +86,16 @@ class Particle{
         public speed:Vector,
     ){
 
+    }
+
+    init(pstable:TableMap<ParticleSystem>){
+        var ps2 = pstable.get(this.particleSystemid) 
+        this.pos = ps2.pos.c()
+    }
+
+    update(dt:number){
+        this.speed.add(gravity.c().scale(dt))
+        this.pos.add(this.speed.c().scale(dt))
     }
 }
 

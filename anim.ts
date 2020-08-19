@@ -18,6 +18,7 @@ class Anim{
         this.duration = duration
         this.animType = animType
         this.stopwatch.start()
+        return this
     }
 
     get():number{
