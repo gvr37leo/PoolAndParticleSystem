@@ -78,7 +78,7 @@ class ParticleSystem{
 class Particle{
     id:number
     size:number
-    color:string
+    color:number
     data:number[] = []
 
     constructor(
@@ -102,6 +102,24 @@ class Particle{
 
     getLifeRatio(){
         return clamp(this.getAgeSec() / this.lifetimesec,0,1)
+    }
+
+    setColorBySpeed(startcolor,endcolor,minspeed,maxspeed){
+        var res = clamp(inverseLerp(this.speed.length(),minspeed,maxspeed),0,1)
+        this.color =  lerp(startcolor,endcolor,res)
+    }
+
+    setColorByLifetime(startcolor,endcolor){
+        this.color =  lerp(startcolor,endcolor,this.getLifeRatio())
+    }
+
+    setSizeBySpeed(minsize,maxsize,minspeed,maxspeed){
+        var res = clamp(inverseLerp(this.speed.length(),minspeed,maxspeed),0,1)
+        this.size =  lerp(minsize,maxsize,res)
+    }
+
+    setSizeByLifetime(minsize,maxsize){
+        this.size =  lerp(minsize,maxsize,this.getLifeRatio())
     }
 }
 
