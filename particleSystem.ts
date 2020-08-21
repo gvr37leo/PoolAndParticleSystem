@@ -3,8 +3,8 @@ class ParticleSystem{
     id:number
     pool = new Pool(400,true)
     particles = new TableMap<Particle>('id',['poolitemid'])
-    onParticleCreated = new EventSystem<Particle>()
-    onParticleDead = new EventSystem<Particle>()
+    onParticleMounted = new EventSystem<Particle>()
+    onParticleDismount = new EventSystem<Particle>()
     onParticleUpdate = new EventSystem<{ particle: Particle; dt: number; }>()
     onParticleDraw = new EventSystem<Particle>()
     private intervalid = null
@@ -24,10 +24,10 @@ class ParticleSystem{
             this.particles.add(particle)
             pi.onMount.listen(() => {
                 particle.mountedAt = Date.now()
-                this.onParticleCreated.trigger(particle)
+                this.onParticleMounted.trigger(particle)
             })
             pi.onDismount.listen(() => {
-                this.onParticleDead.trigger(particle)
+                this.onParticleDismount.trigger(particle)
             })
         })
         this.pool.init()

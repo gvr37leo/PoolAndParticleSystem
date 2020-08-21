@@ -6,17 +6,6 @@
 /// <reference path="particleSystem.ts" />
 /// <reference path="utils.ts" />
 
-
-//todo
-//make it easy todo general unity settings (make a list of usefull settings)
-//duration
-//loop
-//prewarm
-
-
-
-
-
 var fastinfastoutanim = new BezierAnim([
     new Vector(0,0),new Vector(0,1),
     new Vector(0,1),new Vector(0.1,1),new Vector(0.2,1),
@@ -31,15 +20,16 @@ var ctxt = crret.ctxt
 var onUpdate = new EventSystem<number>()
 var onDraw = new EventSystem<void>()
 var rng = new RNG(0)
-var ps = new ParticleSystem(1, new Vector(300,800),4)
+var ps = new ParticleSystem(1, new Vector(screensize.x / 2,screensize.y * 0.8),4)
 ps.init()
 
 
-ps.onParticleCreated.listen(particle => {
+ps.onParticleMounted.listen(particle => {
     particle.pos = ps.pos.c()
     particle.speed = rotate2d(new Vector(0,-200),rng.range(-0.05,0.05))
 })
 
+var gravity = new Vector(0,40)
 ps.onParticleUpdate.listen(({particle,dt}) => {
     particle.speed.add(gravity.c().scale(dt))
     particle.update(dt)
@@ -52,20 +42,23 @@ ps.onParticleDraw.listen(p => {
     fillCircle(p.pos,sizebylifetime,`hsl(${colorbylifetime},100%,50%)`)
 })
 
-ps.onParticleDead.listen(p => {
+ps.onParticleDismount.listen(p => {
 
     let subps = new ParticleSystem(0,p.pos.c(),4)
     subps.init()
-    subps.onParticleCreated.listen(particle => {
+
+    subps.onParticleMounted.listen(particle => {
         particle.pos = subps.pos.c()
         particle.speed = rotate2d(new Vector(rng.range(20,50) + 30,0),rng.norm()).add(p.speed)
         particle.lifetimesec *= rng.range(0.3,1)
         particle.data[0] = rng.range(0.7,1.3)
     })
+
     subps.onParticleUpdate.listen(({particle,dt}) => {
         particle.speed.scale(1 - (0.5 * dt))
         particle.update(dt)
     })
+
     subps.onParticleDraw.listen(p => {
         // var minspeed = 0
         // var maxspeed = 10 
@@ -101,10 +94,6 @@ onDraw.listen(() => {
 
 
 
-
-var gravity = new Vector(0,40)
-
-// setInterval(() => ps.burst(100),3000)
 
 var fps = 0
 setInterval(() => {
