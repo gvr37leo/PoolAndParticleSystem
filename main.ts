@@ -4,23 +4,25 @@
 /// <reference path="table.ts" />
 /// <reference path="eventsystem.ts" />
 /// <reference path="particleSystem.ts" />
+/// <reference path="utils.ts" />
+
 
 //todo
 //make it easy todo general unity settings (make a list of usefull settings)
-//refine bezieranimation
+//duration
+//loop
+//prewarm
 
-class ParticleData{
-    id:number
-    
-    constructor(
-        public particleid:number,
-        public hue:Anim,
-        public size:BezierAnim,
-    ){
 
-    }
-}
 
+
+
+var fastinfastoutanim = new BezierAnim([
+    new Vector(0,0),new Vector(0,1),
+    new Vector(0,1),new Vector(0.1,1),new Vector(0.2,1),
+    new Vector(0.8,1),new Vector(0.9,1),new Vector(1,1),
+    new Vector(1,1),new Vector(1,0),
+])
 
 var screensize = new Vector(document.documentElement.clientWidth,document.documentElement.clientHeight)
 var crret = createCanvas(screensize.x,screensize.y)
@@ -29,47 +31,48 @@ var ctxt = crret.ctxt
 var onUpdate = new EventSystem<number>()
 var onDraw = new EventSystem<void>()
 var rng = new RNG(0)
-var pdatatable = new TableMap<ParticleData>('id',['particleid'])
-var ps = new ParticleSystem<ParticleData>(1, new Vector(300,800),4)
+var ps = new ParticleSystem(1, new Vector(300,800),4)
 ps.init()
-var sizepath = [new Vector(0,0),new Vector(0,1),new Vector(1,1),new Vector(1,0),]
+
 
 ps.onParticleCreated.listen(particle => {
-    particle.data = new ParticleData(particle.id,
-        new Anim().write(0,360,particle.lifetimesec * 1000, AnimType.once), 
-        new BezierAnim(sizepath).write(0,1,particle.lifetimesec * 1000, AnimType.once)
-    )
     particle.pos = ps.pos.c()
-    particle.speed = rotate2d(new Vector(0,-200),rng.range(-0.05,0.05)) 
+    particle.speed = rotate2d(new Vector(0,-200),rng.range(-0.05,0.05))
 })
 
 ps.onParticleUpdate.listen(({particle,dt}) => {
+    particle.speed.add(gravity.c().scale(dt))
     particle.update(dt)
 })
 
 ps.onParticleDraw.listen(p => {
-    var size = p.data.size.getSmooth() * 10
-    fillCircle(p.pos,size,`hsl(${p.data.hue.get()},100%,50%)`)
+    var colorbylifetime = p.getLifeRatio() * 360
+    var sizebylifetime = fastinfastoutanim.getSmoothAt(p.getLifeRatio()) * 10
+
+    fillCircle(p.pos,sizebylifetime,`hsl(${colorbylifetime},100%,50%)`)
 })
 
 ps.onParticleDead.listen(p => {
 
-    let subps = new ParticleSystem<ParticleData>(0,p.pos.c(),4)
+    let subps = new ParticleSystem(0,p.pos.c(),4)
     subps.init()
     subps.onParticleCreated.listen(particle => {
-        particle.data = new ParticleData(particle.id,
-            new Anim().write(0,360,particle.lifetimesec * 1000, AnimType.once), 
-            new BezierAnim(sizepath).write(0,1,(particle.lifetimesec * 1000) * rng.range(0.3,1) , AnimType.once)
-        )
         particle.pos = subps.pos.c()
-        particle.speed = new Vector(rng.range(-50,50),rng.range(-50,50)).add(p.speed)
+        particle.speed = rotate2d(new Vector(rng.range(20,50) + 30,0),rng.norm()).add(p.speed)
+        particle.lifetimesec *= rng.range(0.3,1)
+        particle.data[0] = rng.range(0.7,1.3)
     })
     subps.onParticleUpdate.listen(({particle,dt}) => {
+        particle.speed.scale(1 - (0.5 * dt))
         particle.update(dt)
     })
     subps.onParticleDraw.listen(p => {
-        var size = p.data.size.getSmooth()
-        fillCircle(p.pos,size * 10,'orange')
+        // var minspeed = 0
+        // var maxspeed = 10 
+        // var colorbyspeed = clamp(inverseLerp(p.speed.length(),minspeed,maxspeed),0,1) 
+        // var sizebyspeed = clamp(inverseLerp(p.speed.length(),minspeed,maxspeed),0,1)
+        var sizebylifetime = fastinfastoutanim.getSmoothAt(p.getLifeRatio()) * 5 * p.data[0]
+        fillCircle(p.pos,sizebylifetime,`hsl(30,100%,${(1-p.getLifeRatio()) * 50}%)`)
     })
 
     let onupdateid = onUpdate.listen(dt => {

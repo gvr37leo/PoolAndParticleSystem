@@ -1,12 +1,12 @@
 
-class ParticleSystem<T>{
+class ParticleSystem{
     id:number
     pool = new Pool(400,true)
-    particles = new TableMap<Particle<T>>('id',['poolitemid'])
-    onParticleCreated = new EventSystem<Particle<T>>()
-    onParticleDead = new EventSystem<Particle<T>>()
-    onParticleUpdate = new EventSystem<{ particle: Particle<T>; dt: number; }>()
-    onParticleDraw = new EventSystem<Particle<T>>()
+    particles = new TableMap<Particle>('id',['poolitemid'])
+    onParticleCreated = new EventSystem<Particle>()
+    onParticleDead = new EventSystem<Particle>()
+    onParticleUpdate = new EventSystem<{ particle: Particle; dt: number; }>()
+    onParticleDraw = new EventSystem<Particle>()
     private intervalid = null
 
     constructor(
@@ -20,10 +20,10 @@ class ParticleSystem<T>{
     init(){
         this.pool.onPoolItemInstaniated.listen(pi => {
             
-            let particle = new Particle<T>(this.id,pi.id,this.particlelifetimeSec, new Vector(0,0), new Vector(0,0))
+            let particle = new Particle(this.id,pi.id,this.particlelifetimeSec, new Vector(0,0), new Vector(0,0),null)
             this.particles.add(particle)
             pi.onMount.listen(() => {
-                
+                particle.mountedAt = Date.now()
                 this.onParticleCreated.trigger(particle)
             })
             pi.onDismount.listen(() => {
@@ -75,9 +75,11 @@ class ParticleSystem<T>{
     }
 }
 
-class Particle<T>{
+class Particle{
     id:number
-    data:T
+    size:number
+    color:string
+    data:number[] = []
 
     constructor(
         public particleSystemid:number,
@@ -85,13 +87,21 @@ class Particle<T>{
         public lifetimesec:number,
         public pos:Vector,
         public speed:Vector,
+        public mountedAt:number,
     ){
 
     }
 
     update(dt:number){
-        this.speed.add(gravity.c().scale(dt))
         this.pos.add(this.speed.c().scale(dt))
+    }
+
+    getAgeSec(){
+        return to(this.mountedAt,Date.now()) / 1000
+    }
+
+    getLifeRatio(){
+        return clamp(this.getAgeSec() / this.lifetimesec,0,1)
     }
 }
 
