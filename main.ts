@@ -64,7 +64,7 @@ ps.onParticleDismount.listen(p => {
     let mountid = subps.onParticleMounted.listen(particle => {
         particle.pos = subps.pos.c()
         particle.speed = rotate2d(new Vector(rng.range(20,50) + 30,0),rng.norm()).add(p.speed)
-        particle.lifetimesec *= rng.range(0.3,1)
+        particle.lifetimesec = subps.particlelifetimeSec * rng.range(0.3,1)
         particle.data[0] = rng.range(0.7,1.3)
     })
 
