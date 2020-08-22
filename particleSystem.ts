@@ -30,7 +30,7 @@ class ParticleSystem{
                 this.onParticleDismount.trigger(particle)
             })
         })
-        this.pool.init()
+        this.pool.instantiatePoolItems()
 
         if(this.particlesPerSecond != 0){
             this.intervalid = setInterval(() => {
@@ -144,7 +144,7 @@ class Pool{
         
     }
 
-    init(){
+    instantiatePoolItems(){
         for(var i = 0; i < this.initialsize; i++){
             var item = new PoolItem()
             var id = this.items.add(item)

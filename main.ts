@@ -42,24 +42,38 @@ ps.onParticleDraw.listen(p => {
     fillCircle(p.pos,sizebylifetime,`hsl(${colorbylifetime},100%,50%)`)
 })
 
+var pi2ps = new Map<number,number>()
+var pstable = new TableMap<ParticleSystem>('id',[])
+var subpspool = new Pool(10,true)
+subpspool.onPoolItemInstaniated.listen(pi => {
+    let subps = new ParticleSystem(0,new Vector(0,0),4)
+    pstable.add(subps)
+    subps.init()
+    pi2ps.set(pi.id,subps.id)
+})
+subpspool.instantiatePoolItems()
+
 ps.onParticleDismount.listen(p => {
 
-    let subps = new ParticleSystem(0,p.pos.c(),4)
-    subps.init()
+    // let subps = new ParticleSystem(0,p.pos.c(),4)
+    // subps.init()
+    
+    let subps = this.pstable.get(pi2ps.get(subpspool.get().id))
+    subps.pos.overwrite(p.pos)
 
-    subps.onParticleMounted.listen(particle => {
+    let mountid = subps.onParticleMounted.listen(particle => {
         particle.pos = subps.pos.c()
         particle.speed = rotate2d(new Vector(rng.range(20,50) + 30,0),rng.norm()).add(p.speed)
         particle.lifetimesec *= rng.range(0.3,1)
         particle.data[0] = rng.range(0.7,1.3)
     })
 
-    subps.onParticleUpdate.listen(({particle,dt}) => {
+    let updateid = subps.onParticleUpdate.listen(({particle,dt}) => {
         particle.speed.scale(1 - (0.5 * dt))
         particle.update(dt)
     })
 
-    subps.onParticleDraw.listen(p => {
+    let drawid = subps.onParticleDraw.listen(p => {
         // var minspeed = 0
         // var maxspeed = 10 
         // var colorbyspeed = clamp(inverseLerp(p.speed.length(),minspeed,maxspeed),0,1) 
@@ -78,8 +92,12 @@ ps.onParticleDismount.listen(p => {
 
     setTimeout(() => {
         subps.delete()
+        subpspool.return(subps.id)
         onUpdate.unlisten(onupdateid)
         onDraw.unlisten(ondrawid)
+        subps.onParticleMounted.unlisten(mountid)
+        subps.onParticleUpdate.unlisten(updateid)
+        subps.onParticleDraw.unlisten(drawid)
     },subps.particlelifetimeSec * 1000)
     subps.burst(20)
 })
